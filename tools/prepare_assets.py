@@ -23,6 +23,13 @@ import zipfile
 
 from PIL import Image
 
+# Windows 的 CI 控制台默认不是 UTF-8，直接 print 中文会 UnicodeEncodeError
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 REPO = "https://raw.githubusercontent.com/yugh6/NaiJia/main/"
 PACK = "角色/奶蛙/素材.nwp"
 POSE = "角色/奶蛙/定格.png"

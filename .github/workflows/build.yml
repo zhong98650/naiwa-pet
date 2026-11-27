@@ -21,6 +21,7 @@ jobs:
           python-version: '3.12'
 
       - name: 生成素材
+        env:/n          PYTHONIOENCODING: utf-8
         run: |
           pip install pillow
           python tools/prepare_assets.py
