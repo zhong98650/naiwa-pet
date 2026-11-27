@@ -3,9 +3,12 @@
 一只贴在鼠标指针上的奶蛙桌宠。Windows 10/11，纯 C# WinForms，无第三方依赖。
 
 <p align="center">
-  <img src="docs/img/pose-idle.png" width="240" alt="站姿">
-  <img src="docs/img/pose-hover.png" width="240" alt="悬停按钮时伸手">
+  <img src="docs/img/pose-idle.png" width="200" alt="站姿">
+  <img src="docs/img/pose-hover.png" width="200" alt="悬停按钮时伸手">
+  <img src="docs/img/pose-laugh.png" width="200" alt="捧腹大笑">
 </p>
+
+<p align="center"><sub>从左到右：站着 / 指向可点击处时伸手 / 双击后大笑（都是素材包里的原始帧）</sub></p>
 
 指针固定在它头和肚子之间的空白处，所以走动时它像是被"拎着"一起走。它不会被点到——
 窗口是鼠标穿透的，不挡你操作，也不进 Alt+Tab。
@@ -22,7 +25,10 @@
 ## 快速开始
 
 **直接用**：到 [Releases](../../releases/latest) 下载 `NaiwaPet-win-x64.exe`（可以随便改名），双击运行即可。
-单文件、自带 .NET 运行时，不需要安装任何东西。退出在托盘图标右键。
+单文件、自带 .NET 运行时，不需要安装任何东西。
+
+> 首次运行**默认会开机自启**（写 `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`）。
+> 不想要的话，托盘图标右键 → **开机启动**，把勾去掉即可，启动项会自动删除。
 
 **自己编译**：
 
@@ -41,7 +47,12 @@ dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=
 
 - **大小**：小 / 中 / 大
 - **双击时大笑**：它是鼠标穿透的，收不到自己的点击，所以判断的是全局双击——桌面上任何地方双击都会触发。嫌吵就关掉
-- **置顶** / **退出**
+- **置顶**：关掉后会被其他窗口盖住
+- **开机启动**：默认勾选，取消会自动删掉启动项
+- **退出**：正常退出
+
+设置保存在 `%APPDATA%\NaiwaPet\settings.json`，下次启动会沿用（大小、置顶、双击大笑、开机启动都会记住）。
+把整个 exe 移到别的目录也没关系，启动时会自动把启动项更新成当前路径。
 
 ## 一些实现细节
 
@@ -61,7 +72,6 @@ dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=
 ## 已知限制
 
 - 只发布了 win-x64。ARM 版 Windows 需要自己改 `RuntimeIdentifier` 重新编译。
-- 托盘里的设置目前不持久化，每次启动回默认。
 - 首次运行单文件程序会自解压到 `%TEMP%\.net`，个别杀软会因此误报。
 - 只对系统手型光标有反应，自定义光标的场景不会触发"伸手"。
 
@@ -73,7 +83,7 @@ dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=
 
 - 仅限**非商业**用途
 - 分发时必须随附该许可文本（见 [NOTICE.md](NOTICE.md)）
-- 因此这些图片**不内置在本仓库**，构建时用脚本从原仓库获取
+- 因此这些图片**不内置在本仓库**，构建时用脚本从原仓库获取；项目介绍里的展示图也是同一批原始帧
 
 **代码**（`src/`、`tools/`）以 MIT 许可发布，见 [LICENSE](LICENSE)。
 代码和素材的许可是分开的，请注意区分。
