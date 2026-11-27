@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>NaiwaPet</AssemblyName>
+    <RootNamespace>NaiwaPet</RootNamespace>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <Version>1.0.0</Version>
+    <ApplicationIcon>app.ico</ApplicationIcon>
+
+    <!-- 单文件、自带运行时：拷到别的 Windows 机器双击即用 -->
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 素材由 tools/prepare_assets.py 生成，全部嵌进 exe -->
+    <EmbeddedResource Include="assets\**\*.png" />
+  </ItemGroup>
+
+  <Target Name="CheckAssets" BeforeTargets="Build" Condition="!Exists('assets\pet.png')">
+    <Error Text="缺少素材：先运行 python tools/prepare_assets.py 生成 src/assets/ 再编译。" />
+  </Target>
+</Project>
