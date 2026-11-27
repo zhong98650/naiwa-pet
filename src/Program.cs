@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
+using System.Text.Json;
+using Microsoft.Win32;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
@@ -21,6 +23,47 @@ namespace NaiwaPet
     ///   LaughEnd 笑倒躺平，停 2 秒自己爬起来
     ///   Sleep    鼠标 30 秒不动就躺下
     /// </summary>
+    /// <summary>托盘设置持久化到 %APPDATA%\NaiwaPet\settings.json。</summary>
+    internal sealed class Settings
+    {
+        public bool AutoStart { get; set; } = true;
+        public int SizePreset { get; set; } = 1;
+        public bool ClickToLaugh { get; set; } = true;
+        public bool TopMost { get; set; } = true;
+
+        static string FilePath
+        {
+            get
+            {
+                return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                                    "NaiwaPet", "settings.json");
+            }
+        }
+
+        public static Settings Load()
+        {
+            try
+            {
+                var s = JsonSerializer.Deserialize<Settings>(File.ReadAllText(FilePath));
+                if (s != null) { s.SizePreset = Math.Clamp(s.SizePreset, 0, 2); return s; }
+            }
+            catch { }
+            var fresh = new Settings();
+            fresh.Save();          // 首次运行把默认值落盘，方便查看/修改
+            return fresh;
+        }
+
+        public void Save()
+        {
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(FilePath));
+                File.WriteAllText(FilePath, JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }));
+            }
+            catch { }
+        }
+    }
+
     internal sealed class PetForm : Form
     {
         // 源图 idle.png 是 288x368；指针放在头与肚子之间的缺口 (55,73)，
@@ -37,6 +80,8 @@ namespace NaiwaPet
         const uint ULW_ALPHA = 0x02;
         const byte AC_SRC_ALPHA = 0x01;
         const int VK_LBUTTON = 0x01;
+        const string RunKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
+        const string RunValueName = "NaiwaPet";
 
         [StructLayout(LayoutKind.Sequential)] struct POINT { public int X, Y; }
         [StructLayout(LayoutKind.Sequential)] struct SIZE { public int cx, cy; }
@@ -121,6 +166,7 @@ namespace NaiwaPet
 
         NotifyIcon _tray;
         bool _clickToLaugh = true;
+        Settings _settings;
 
         public PetForm()
         {
@@ -153,8 +199,30 @@ namespace NaiwaPet
             catch (Exception ex) { Log("LOAD ERROR: " + ex); }
         }
 
+        /// <summary>写入/删除 HKCU\...\Run。路径用当前 exe，所以整个文件夹挪走也没问题。</summary>
+        static void ApplyAutoStart(bool on)
+        {
+            try
+            {
+                using (var key = Registry.CurrentUser.OpenSubKey(RunKeyPath, true))
+                {
+                    if (key == null) return;
+                    if (on)
+                        key.SetValue(RunValueName, "\"" + Environment.ProcessPath + "\"", RegistryValueKind.String);
+                    else
+                        key.DeleteValue(RunValueName, false);
+                }
+            }
+            catch { }   // 公司策略可能禁止写启动项，不让程序因此崩掉
+        }
+
         void LoadCore()
         {
+            _settings = Settings.Load();
+            _preset = _settings.SizePreset;
+            _clickToLaugh = _settings.ClickToLaugh;
+            TopMost = _settings.TopMost;
+            ApplyAutoStart(_settings.AutoStart);
             _memDC = CreateCompatibleDC(GetDC(IntPtr.Zero));
             _handCursor = LoadCursorW(IntPtr.Zero, (IntPtr)32649);   // IDC_HAND
             POINT p0;
@@ -461,25 +529,46 @@ namespace NaiwaPet
             for (int i = 0; i < names.Length; i++)
             {
                 int idx = i;
-                var item = new ToolStripMenuItem(names[i]) { Checked = idx == _preset };
+                var item = new ToolStripMenuItem(names[i]) { Checked = idx == _settings.SizePreset };
                 item.Click += (s, e) =>
                 {
                     _preset = idx;
                     foreach (ToolStripMenuItem mi in sizeMenu.DropDownItems) mi.Checked = false;
                     item.Checked = true;
+                    _settings.SizePreset = idx;
+                    _settings.Save();
                     Rebuild();
                 };
                 sizeMenu.DropDownItems.Add(item);
             }
             menu.Items.Add(sizeMenu);
 
-            var laughItem = new ToolStripMenuItem("双击时大笑") { Checked = true, CheckOnClick = true };
-            laughItem.CheckedChanged += (s, e) => _clickToLaugh = laughItem.Checked;
+            var laughItem = new ToolStripMenuItem("双击时大笑") { Checked = _settings.ClickToLaugh, CheckOnClick = true };
+            laughItem.CheckedChanged += (s, e) =>
+            {
+                _clickToLaugh = laughItem.Checked;
+                _settings.ClickToLaugh = laughItem.Checked;
+                _settings.Save();
+            };
             menu.Items.Add(laughItem);
 
-            var top = new ToolStripMenuItem("置顶") { Checked = true, CheckOnClick = true };
-            top.CheckedChanged += (s, e) => TopMost = top.Checked;
+            var top = new ToolStripMenuItem("置顶") { Checked = _settings.TopMost, CheckOnClick = true };
+            top.CheckedChanged += (s, e) =>
+            {
+                TopMost = top.Checked;
+                _settings.TopMost = top.Checked;
+                _settings.Save();
+            };
             menu.Items.Add(top);
+
+            var auto = new ToolStripMenuItem("开机启动") { Checked = _settings.AutoStart, CheckOnClick = true };
+            auto.CheckedChanged += (s, e) =>
+            {
+                _settings.AutoStart = auto.Checked;
+                ApplyAutoStart(auto.Checked);
+                _settings.Save();
+            };
+            menu.Items.Add(auto);
 
             menu.Items.Add(new ToolStripSeparator());
             var quit = new ToolStripMenuItem("退出");
