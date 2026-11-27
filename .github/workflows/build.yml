@@ -20,13 +20,14 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: 生成素材
-        env:/n          PYTHONIOENCODING: utf-8
+      - name: Prepare assets
+        env:
+          PYTHONIOENCODING: utf-8
         run: |
           pip install pillow
           python tools/prepare_assets.py
 
-      - name: 编译单文件
+      - name: Publish single file
         run: dotnet publish src/NaiwaPet.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o dist
 
       - uses: actions/upload-artifact@v4
